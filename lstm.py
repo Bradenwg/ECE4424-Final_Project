@@ -3,17 +3,19 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, r2_score
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 
 
-data = pd.read_csv('goog.us.txt', parse_dates=['Date'], index_col='Date')
+data = pd.read_csv('Stock_Market_Data.csv', parse_dates=['Date'], index_col='Date')
 data.sort_index(inplace=True)
 
 
 data['Prev_Close'] = data['Close'].shift(1)
 data['MA_5'] = data['Close'].rolling(window=5).mean()
 data['MA_20'] = data['Close'].rolling(window=20).mean()
+#data['EMA_10'] = data['Close'].ewm(span=10, adjust=False).mean()
+#data['Volume_MA_10'] = data['Volume'].rolling(window=10).mean()
 
 data.dropna(inplace=True)
 
@@ -24,7 +26,7 @@ target = data['Close'].values
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled_features = scaler.fit_transform(features)
 
-sequence_length = 500  # Number of days to look back to predict the next day's close
+sequence_length = 600  # Number of days to look back to predict the next day's close
 X = []
 y = []
 
@@ -44,15 +46,17 @@ y_train, y_test = y[:train_size], y[train_size:]
 
 
 model = Sequential()
-model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], X_train.shape[2])))
-model.add(LSTM(units=50))
+model.add(LSTM(units=100, return_sequences=True, input_shape=(X_train.shape[1], X_train.shape[2])))
+#model.add(Dropout(0.2))
+model.add(LSTM(units=100))
+#model.add(Dropout(0.2))
 model.add(Dense(1))  # Predict a single value (next day's close)
 
 model.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
 model.summary()
 
 # Train the model
-history = model.fit(X_train, y_train, epochs=20, batch_size=32, validation_split=0.1, shuffle=False)
+history = model.fit(X_train, y_train, epochs=20, batch_size=16, validation_split=0.1, shuffle=False)
 
 y_pred = model.predict(X_test)
 
@@ -66,9 +70,11 @@ y_test_original = scaler.inverse_transform(dummy_test)[:, 0]
 
 mse = mean_squared_error(y_test_original, y_pred_original)
 r2 = r2_score(y_test_original, y_pred_original)
+rmse = np.sqrt(mse)
+
 print("Test MSE:", mse)
 print("Test R²:", r2)
-
+print("Root Mean Squared Error:", rmse)
 
 last_sequence = scaled_features[-sequence_length:]  
 last_sequence = np.expand_dims(last_sequence, axis=0)  # reshape for model input

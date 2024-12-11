@@ -4,7 +4,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-data = pd.read_csv('goog.us.txt', parse_dates=['Date'], index_col='Date')
+data = pd.read_csv('Stock_Market_Data.csv', parse_dates=['Date'], index_col='Date')
 
 # Sort data by date just to be sure
 data.sort_index(inplace=True)
@@ -15,6 +15,7 @@ data.sort_index(inplace=True)
 data['Prev_Close'] = data['Close'].shift(1)
 data['MA_5'] = data['Close'].rolling(window=5).mean()
 data['MA_20'] = data['Close'].rolling(window=20).mean()
+data['Volume_MA_10'] = data['Volume'].rolling(window=10).mean()
 
 
 # The target variable will be today's close price
@@ -25,7 +26,7 @@ data = data.dropna()
 
 # Re-define target and features after dropping NaNs
 target = data['Close']
-features = data[['Prev_Close', 'MA_5', 'MA_20']]
+features = data[['Prev_Close', 'MA_5', 'MA_20', 'Volume_MA_10']]
 
 # Split data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, shuffle=False)
@@ -40,9 +41,11 @@ y_pred = model.predict(X_test)
 # Evaluate the model
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mse)
 
 print("Mean Squared Error:", mse)
 print("R² Score:", r2)
+print("Root Mean Squared Error:", rmse)
 
 # Predict the next day's close price
 last_features = features.iloc[-1:].copy()

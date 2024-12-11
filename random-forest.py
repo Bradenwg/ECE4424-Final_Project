@@ -12,17 +12,21 @@ data.sort_index(inplace=True)
 data['Prev_Close'] = data['Close'].shift(1)
 data['MA_5'] = data['Close'].rolling(window=5).mean()
 data['MA_20'] = data['Close'].rolling(window=20).mean()
+data['Volume_MA_10'] = data['Volume'].rolling(window=10).mean()
 
 # The target is today's close, so we should drop rows with NaNs first
 data.dropna(inplace=True)
 
 target = data['Close']
-features = data[['Prev_Close', 'MA_5', 'MA_20', 'Volume']]
+features = data[['Prev_Close', 'MA_5', 'MA_20']]
 
 X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, shuffle=False)
 
 
-model = RandomForestRegressor(n_estimators=150, max_depth=15, random_state=42)
+model = RandomForestRegressor(n_estimators=50, max_depth=10,min_samples_split=5,
+    min_samples_leaf=2,
+    max_features='sqrt',
+    bootstrap=True, random_state=42)
 model.fit(X_train, y_train)
 
 
@@ -30,8 +34,10 @@ y_pred = model.predict(X_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mse)
 print("Test MSE:", mse)
 print("Test R²:", r2)
+print("Root Mean Squared Error:", rmse)
 
 
 # Get the most recent feature row from the dataset
